@@ -1,6 +1,6 @@
 # Task Reminder
 
-A panel widget for Linux desktops that combines a todo checklist with countdown and absolute-time reminders. Supports Cinnamon, GNOME Shell, and KDE Plasma. Integrates with your Nextcloud CalDAV calendar (read-only).  This project is ai-assisted.
+A panel widget for Linux desktops that combines a todo checklist with countdown and absolute-time reminders. Supports Cinnamon, GNOME Shell, and KDE Plasma. Integrates with your Nextcloud CalDAV calendar (read-only).  This project is ai-assisted. The cinnamon applet is the most stable. Haven't tested gnome or kde yet.
 
 ## Features
 
