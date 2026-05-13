@@ -1,0 +1,13 @@
+{
+    "uuid": "reminder@bitcrash",
+    "name": "Task Reminder",
+    "description": "Timer and todo list applet with countdown and absolute time reminders for scheduling tasks throughout the day.",
+    "version": "1.0.0",
+    "author": "bitcrash",
+    "cinnamon-version": ["5.0", "5.2", "5.4", "5.6", "5.8", "6.0"],
+    "max-instances": 1,
+    "icon": "icon.svg",
+    "category": "Utility",
+    "keywords": ["timer", "todo", "reminder", "task", "schedule", "countdown"],
+    "last-edited": "2026-05-01"
+}

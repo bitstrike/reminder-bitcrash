@@ -1,0 +1,9 @@
+{
+    "uuid": "reminder@bitcrash",
+    "name": "Task Reminder",
+    "description": "Timer and todo list extension with countdown and absolute time reminders for scheduling tasks throughout the day.",
+    "version": 1,
+    "shell-version": ["46"],
+    "settings-schema": "org.gnome.shell.extensions.bitcrash.reminder",
+    "url": ""
+}

@@ -1,0 +1,306 @@
+/* reminder@bitcrash stylesheet */
+
+/* ---- Popup container ---- */
+.reminder-popup {
+    min-width: 380px;
+    max-width: 420px;
+}
+
+/* ---- Header ---- */
+.reminder-header {
+    padding: 8px 12px;
+    spacing: 8px;
+}
+
+.reminder-header-label {
+    font-size: 13px;
+    font-weight: bold;
+    color: #eee;
+}
+
+/* ---- Buttons ---- */
+.reminder-btn {
+    font-size: 11px;
+    padding: 4px 10px;
+    border: 1px solid #666;
+    border-radius: 3px;
+    background-color: #444;
+    color: #ddd;
+}
+
+.reminder-btn:hover {
+    background-color: #555;
+}
+
+.reminder-btn-primary {
+    background-color: #4a8c5c;
+    border-color: #5a9c6c;
+    color: #fff;
+}
+
+.reminder-btn-primary:hover {
+    background-color: #5a9c6c;
+}
+
+.reminder-btn-danger {
+    background-color: #8c4a4a;
+    border-color: #9c5a5a;
+    color: #fff;
+}
+
+.reminder-btn-danger:hover {
+    background-color: #9c5a5a;
+}
+
+/* ---- Task rows ---- */
+.reminder-task-row {
+    padding: 6px 12px;
+    spacing: 2px;
+    border-left: 3px solid transparent;
+    padding-left: 4px;
+}
+
+.reminder-task-row:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.reminder-row-line1 {
+    spacing: 6px;
+}
+
+.reminder-row-line2 {
+    spacing: 6px;
+    padding-left: 24px;
+}
+
+/* ---- Task description ---- */
+.reminder-task-desc {
+    font-size: 12px;
+    color: #eee;
+}
+
+.reminder-task-desc-done {
+    font-size: 12px;
+    color: #888;
+    text-decoration: line-through;
+}
+
+.reminder-task-desc-stale {
+    font-size: 12px;
+    color: #999;
+    text-decoration: line-through;
+}
+
+/* ---- Meta line ---- */
+.reminder-task-meta {
+    font-size: 10px;
+    color: #999;
+    spacing: 6px;
+}
+
+/* ---- Badges ---- */
+.reminder-badge {
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 2px;
+    background-color: #444;
+}
+
+.reminder-badge-countdown {
+    color: #7bc8f6;
+}
+
+.reminder-badge-absolute {
+    color: #f6c87b;
+}
+
+.reminder-badge-expired {
+    color: #f67b7b;
+    background-color: #4a2a2a;
+}
+
+.reminder-badge-stale {
+    color: #f67b7b;
+}
+
+.reminder-badge-cal {
+    color: #5b9bd5;
+    background-color: #2a3a4a;
+}
+
+.reminder-badge-now {
+    color: #4a8c5c;
+    background-color: #2a3a2e;
+}
+
+/* ---- Action buttons (small, inline) ---- */
+.reminder-task-btn {
+    font-size: 10px;
+    padding: 2px 6px;
+    border: 1px solid #555;
+    border-radius: 2px;
+    background-color: #3a3a3a;
+    color: #bbb;
+}
+
+.reminder-task-btn:hover {
+    background-color: #4a4a4a;
+    color: #fff;
+}
+
+/* ---- T-15 / T-5 toggle buttons ---- */
+.reminder-toggle-t-active {
+    font-size: 9px;
+    padding: 2px 5px;
+    border: 1px solid #5b9bd5;
+    border-radius: 2px;
+    background-color: #2a4a5a;
+    color: #7bc8f6;
+}
+
+.reminder-toggle-t-active:hover {
+    background-color: #3a5a6a;
+}
+
+.reminder-toggle-t-inactive {
+    font-size: 9px;
+    padding: 2px 5px;
+    border: 1px solid #555;
+    border-radius: 2px;
+    background-color: #3a3a3a;
+    color: #888;
+}
+
+.reminder-toggle-t-inactive:hover {
+    background-color: #4a4a4a;
+    color: #aaa;
+}
+
+/* ---- V-alarm toggle buttons (VALARM from calendar) ---- */
+.reminder-toggle-v-active {
+    font-size: 9px;
+    padding: 2px 5px;
+    border: 1px solid #9b59b6;
+    border-radius: 2px;
+    background-color: #3a2a4a;
+    color: #c89be0;
+}
+
+.reminder-toggle-v-active:hover {
+    background-color: #4a3a5a;
+}
+
+.reminder-toggle-v-inactive {
+    font-size: 9px;
+    padding: 2px 5px;
+    border: 1px solid #555;
+    border-radius: 2px;
+    background-color: #3a3a3a;
+    color: #888;
+}
+
+.reminder-toggle-v-inactive:hover {
+    background-color: #4a4a4a;
+    color: #aaa;
+}
+
+/* ---- Checkbox ---- */
+.reminder-checkbox {
+    min-width: 16px;
+    max-width: 16px;
+    min-height: 16px;
+    max-height: 16px;
+    border: 2px solid #777;
+    border-radius: 3px;
+}
+
+.reminder-checkbox-checked {
+    min-width: 16px;
+    max-width: 16px;
+    min-height: 16px;
+    max-height: 16px;
+    background-color: #4a8c5c;
+    border: 2px solid #4a8c5c;
+    border-radius: 3px;
+    color: #fff;
+    font-size: 11px;
+}
+
+/* ---- Calendar event border colors (applied via inline style) ---- */
+.reminder-cal-upcoming {
+    border-left: 3px solid #5b9bd5;
+    padding-left: 4px;
+}
+
+.reminder-cal-inprogress {
+    border-left: 3px solid #4a8c5c;
+    padding-left: 4px;
+    background-color: rgba(42, 58, 46, 0.5);
+}
+
+.reminder-cal-expired {
+    border-left: 3px solid #f67b7b;
+    padding-left: 4px;
+    background-color: rgba(58, 42, 42, 0.5);
+}
+
+.reminder-cal-acknowledged {
+    border-left: 3px solid #666;
+    padding-left: 4px;
+}
+
+/* ---- Form elements ---- */
+.reminder-form-label {
+    font-size: 11px;
+    color: #aaa;
+}
+
+.reminder-form-input {
+    font-size: 12px;
+    padding: 6px 8px;
+    background-color: #444;
+    border: 1px solid #666;
+    border-radius: 3px;
+    color: #eee;
+    min-width: 200px;
+}
+
+.reminder-time-input {
+    font-size: 13px;
+    padding: 5px;
+    background-color: #444;
+    border: 1px solid #666;
+    border-radius: 3px;
+    color: #eee;
+    min-width: 44px;
+    max-width: 44px;
+}
+
+.reminder-time-sep {
+    font-size: 14px;
+    font-weight: bold;
+    color: #888;
+}
+
+.reminder-toggle-btn {
+    font-size: 11px;
+    padding: 5px 12px;
+    background-color: #444;
+    color: #aaa;
+    border: 1px solid #666;
+}
+
+.reminder-toggle-btn-active {
+    font-size: 11px;
+    padding: 5px 12px;
+    background-color: #5b9bd5;
+    color: #fff;
+    border: 1px solid #5b9bd5;
+}
+
+/* ---- Empty state ---- */
+.reminder-no-tasks {
+    font-size: 12px;
+    color: #888;
+    padding: 20px;
+}

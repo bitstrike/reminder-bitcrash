@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="reminder@bitcrash">
+  <schema id="org.gnome.shell.extensions.bitcrash.reminder"
+          path="/org/gnome/shell/extensions/bitcrash/reminder/">
+
+    <key name="notify-past-due" type="b">
+      <default>true</default>
+      <summary>Notify on past due items at startup</summary>
+      <description>If false, tasks that expired while the extension was not running will be automatically dismissed on startup.</description>
+    </key>
+
+    <key name="respect-valarm" type="b">
+      <default>true</default>
+      <summary>Respect VALARM reminders in calendar events</summary>
+      <description>If true, calendar event reminders (VALARM) will trigger notifications at their specified times.</description>
+    </key>
+
+    <key name="enable-countdown-reminders" type="b">
+      <default>true</default>
+      <summary>Enable T-15 and T-5 countdown reminders</summary>
+      <description>If true, tasks and events show T-15 and T-5 toggle buttons for pre-event notifications.</description>
+    </key>
+
+    <key name="allday-reminder-hour" type="i">
+      <default>8</default>
+      <summary>All-day event reminder hour</summary>
+      <description>Hour (0-23) to notify about all-day calendar events.</description>
+    </key>
+
+    <key name="allday-reminder-minute" type="i">
+      <default>0</default>
+      <summary>All-day event reminder minute</summary>
+      <description>Minute (0-59) to notify about all-day calendar events.</description>
+    </key>
+
+    <key name="enable-sound" type="b">
+      <default>true</default>
+      <summary>Play sound when a reminder fires</summary>
+      <description>Enable audible alert when a task or event reminder triggers.</description>
+    </key>
+
+    <key name="sound-file" type="s">
+      <default>''</default>
+      <summary>Sound file path</summary>
+      <description>Path to an audio file (.wav, .ogg, .mp3) to play when a reminder fires.</description>
+    </key>
+
+    <key name="caldav-url" type="s">
+      <default>''</default>
+      <summary>Nextcloud server URL</summary>
+      <description>Base URL of the Nextcloud instance, e.g. https://cloud.example.com</description>
+    </key>
+
+    <key name="browser-command" type="s">
+      <default>''</default>
+      <summary>Browser command for authentication</summary>
+      <description>Command to open a URL for Nextcloud login. Use %u as placeholder. Leave blank for system default.</description>
+    </key>
+
+    <key name="caldav-calendars" type="s">
+      <default>'[]'</default>
+      <summary>Nextcloud calendar list (JSON)</summary>
+      <description>JSON array of calendar objects with enabled, displayName, filter, and href fields.</description>
+    </key>
+
+  </schema>
+</schemalist>

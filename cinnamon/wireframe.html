@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>reminder@bitcrash - UI Wireframe</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #2b2b2b;
+    font-family: "Noto Sans", "DejaVu Sans", sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+    color: #ddd;
+  }
+  h1 { font-size: 14px; color: #888; margin-bottom: 20px; letter-spacing: 1px; }
+  .label { font-size: 11px; color: #777; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* --- Panel Bar --- */
+  .panel-bar {
+    background: #1a1a1a;
+    height: 32px;
+    width: 700px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 12px;
+    border-radius: 0;
+    gap: 16px;
+    font-size: 12px;
+    color: #ccc;
+    margin-bottom: 4px;
+  }
+  .panel-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+  .panel-item.active {
+    background: #3a3a3a;
+  }
+  .panel-icon {
+    width: 16px; height: 16px;
+    background: #5b9bd5;
+    border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; color: #fff;
+  }
+
+  /* --- Popup --- */
+  .popup {
+    background: #333;
+    border: 1px solid #555;
+    border-radius: 6px;
+    width: 380px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    overflow: hidden;
+  }
+  .popup-header {
+    background: #3a3a3a;
+    padding: 10px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #555;
+  }
+  .popup-header h2 {
+    font-size: 13px;
+    font-weight: 600;
+    color: #eee;
+  }
+  .header-buttons {
+    display: flex;
+    gap: 6px;
+  }
+  .btn {
+    font-size: 11px;
+    padding: 4px 10px;
+    border: 1px solid #666;
+    border-radius: 3px;
+    background: #444;
+    color: #ddd;
+    cursor: pointer;
+  }
+  .btn:hover { background: #555; }
+  .btn.primary {
+    background: #4a8c5c;
+    border-color: #5a9c6c;
+    color: #fff;
+  }
+  .btn.danger {
+    background: #8c4a4a;
+    border-color: #9c5a5a;
+    color: #fff;
+  }
+
+  /* --- Task List --- */
+  .task-list {
+    max-height: 320px;
+    overflow-y: auto;
+  }
+  .task-row {
+    display: flex;
+    align-items: flex-start;
+    padding: 8px 14px;
+    border-bottom: 1px solid #3e3e3e;
+    gap: 8px;
+  }
+  .task-row:hover { background: #3a3a3a; }
+  .task-row.stale {
+    opacity: 0.5;
+    background: #2e2a2a;
+  }
+  .task-checkbox {
+    width: 16px; height: 16px;
+    border: 2px solid #777;
+    border-radius: 3px;
+    margin-top: 2px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .task-checkbox.checked {
+    background: #4a8c5c;
+    border-color: #4a8c5c;
+  }
+  .task-checkbox.checked::after {
+    content: "\2713";
+    color: #fff;
+    font-size: 11px;
+  }
+  .task-body {
+    flex: 1;
+    min-width: 0;
+  }
+  .task-desc {
+    font-size: 12px;
+    color: #eee;
+    line-height: 1.3;
+  }
+  .task-row.stale .task-desc { text-decoration: line-through; color: #999; }
+  .task-meta {
+    font-size: 10px;
+    color: #999;
+    margin-top: 2px;
+    display: flex;
+    gap: 8px;
+  }
+  .task-meta .badge {
+    background: #444;
+    padding: 1px 5px;
+    border-radius: 2px;
+    font-size: 9px;
+  }
+  .badge.countdown { color: #7bc8f6; }
+  .badge.absolute { color: #f6c87b; }
+  .badge.expired { color: #f67b7b; background: #4a2a2a; }
+  .badge.stale-badge { color: #f67b7b; }
+  .task-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex-shrink: 0;
+  }
+  .task-btn {
+    font-size: 10px;
+    padding: 2px 6px;
+    border: 1px solid #555;
+    border-radius: 2px;
+    background: #3a3a3a;
+    color: #bbb;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .task-btn:hover { background: #4a4a4a; color: #fff; }
+
+  /* --- New Task Form --- */
+  .new-task-form {
+    background: #2e2e2e;
+    border: 1px solid #555;
+    border-radius: 6px;
+    width: 380px;
+    margin-top: 30px;
+    overflow: hidden;
+  }
+  .form-header {
+    background: #3a3a3a;
+    padding: 10px 14px;
+    border-bottom: 1px solid #555;
+    font-size: 13px;
+    font-weight: 600;
+    color: #eee;
+  }
+  .form-body {
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .form-group label {
+    display: block;
+    font-size: 11px;
+    color: #aaa;
+    margin-bottom: 4px;
+  }
+  .form-input {
+    width: 100%;
+    padding: 6px 8px;
+    background: #444;
+    border: 1px solid #666;
+    border-radius: 3px;
+    color: #eee;
+    font-size: 12px;
+  }
+  .timer-toggle {
+    display: flex;
+    gap: 0;
+    border: 1px solid #666;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .timer-toggle-btn {
+    flex: 1;
+    padding: 5px 0;
+    text-align: center;
+    font-size: 11px;
+    background: #444;
+    color: #aaa;
+    cursor: pointer;
+    border: none;
+  }
+  .timer-toggle-btn.active {
+    background: #5b9bd5;
+    color: #fff;
+  }
+  .time-inputs {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .time-input {
+    width: 44px;
+    padding: 5px;
+    background: #444;
+    border: 1px solid #666;
+    border-radius: 3px;
+    color: #eee;
+    font-size: 13px;
+    text-align: center;
+  }
+  .time-sep {
+    color: #888;
+    font-size: 14px;
+    font-weight: bold;
+  }
+  .ampm-toggle {
+    display: flex;
+    border: 1px solid #666;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-left: 4px;
+  }
+  .ampm-btn {
+    padding: 4px 8px;
+    font-size: 11px;
+    background: #444;
+    color: #aaa;
+    border: none;
+    cursor: pointer;
+  }
+  .ampm-btn.active { background: #5b9bd5; color: #fff; }
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    padding-top: 4px;
+  }
+
+  /* --- Sections --- */
+  .section {
+    margin-top: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* --- Annotation arrows --- */
+  .annotation {
+    font-size: 10px;
+    color: #5b9bd5;
+    font-style: italic;
+    margin: 4px 0;
+  }
+</style>
+</head>
+<body>
+
+<h1>REMINDER@BITCRASH - UI WIREFRAME</h1>
+
+<!-- ===== PANEL BAR ===== -->
+<div class="label">Cinnamon Panel (system tray area)</div>
+<div class="panel-bar">
+  <div class="panel-item">
+    <span style="font-size:11px">Vol</span>
+  </div>
+  <div class="panel-item">
+    <span style="font-size:11px">Net</span>
+  </div>
+  <div class="panel-item active">
+    <div class="panel-icon">R</div>
+    <span>Report - 47m</span>
+  </div>
+  <div class="panel-item">
+    <span style="font-size:11px">3:42 PM</span>
+  </div>
+</div>
+<div class="annotation">^ Panel shows next task name + time remaining. Click to open popup.</div>
+
+<!-- ===== MAIN POPUP ===== -->
+<div class="section">
+  <div class="label">Main Popup (click panel icon)</div>
+  <div class="popup">
+    <div class="popup-header">
+      <h2>Tasks</h2>
+      <div class="header-buttons">
+        <button class="btn danger">Dismiss All Old</button>
+        <button class="btn primary">+ New Task</button>
+      </div>
+    </div>
+    <div class="task-list">
+
+      <!-- Active countdown task -->
+      <div class="task-row">
+        <div class="task-checkbox"></div>
+        <div class="task-body">
+          <div class="task-desc">Lunch break</div>
+          <div class="task-meta">
+            <span class="badge countdown">COUNTDOWN</span>
+            <span>32:15 remaining</span>
+          </div>
+        </div>
+        <div class="task-actions">
+          <button class="task-btn">Edit</button>
+          <button class="task-btn">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Active absolute task -->
+      <div class="task-row">
+        <div class="task-checkbox"></div>
+        <div class="task-body">
+          <div class="task-desc">Finish report</div>
+          <div class="task-meta">
+            <span class="badge absolute">3:30 PM</span>
+            <span>47 min left</span>
+          </div>
+        </div>
+        <div class="task-actions">
+          <button class="task-btn">Edit</button>
+          <button class="task-btn">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Completed task -->
+      <div class="task-row">
+        <div class="task-checkbox checked"></div>
+        <div class="task-body">
+          <div class="task-desc" style="text-decoration:line-through;color:#888;">Review PR #42</div>
+          <div class="task-meta">
+            <span class="badge absolute" style="opacity:0.5">1:00 PM</span>
+            <span style="color:#6b6">Done</span>
+          </div>
+        </div>
+        <div class="task-actions">
+          <button class="task-btn">Dismiss</button>
+        </div>
+      </div>
+
+      <!-- Expired task -->
+      <div class="task-row">
+        <div class="task-checkbox"></div>
+        <div class="task-body">
+          <div class="task-desc">Standup meeting</div>
+          <div class="task-meta">
+            <span class="badge expired">EXPIRED</span>
+            <span>was 10:00 AM</span>
+          </div>
+        </div>
+        <div class="task-actions">
+          <button class="task-btn">Dismiss</button>
+        </div>
+      </div>
+
+      <!-- Stale (yesterday) task -->
+      <div class="task-row stale">
+        <div class="task-checkbox"></div>
+        <div class="task-body">
+          <div class="task-desc">Deploy staging build</div>
+          <div class="task-meta">
+            <span class="badge stale-badge">YESTERDAY</span>
+            <span>was 5:00 PM</span>
+          </div>
+        </div>
+        <div class="task-actions">
+          <button class="task-btn">Dismiss</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===== NEW TASK FORM (Countdown mode) ===== -->
+<div class="section">
+  <div class="label">New Task Form - Countdown Mode</div>
+  <div class="new-task-form">
+    <div class="form-header">New Task</div>
+    <div class="form-body">
+      <div class="form-group">
+        <label>Description</label>
+        <input class="form-input" type="text" placeholder="e.g. Lunch break" value="Lunch break">
+      </div>
+      <div class="form-group">
+        <label>Timer Mode</label>
+        <div class="timer-toggle">
+          <div class="timer-toggle-btn active">Countdown</div>
+          <div class="timer-toggle-btn">Set Time (AM/PM)</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Duration</label>
+        <div class="time-inputs">
+          <input class="time-input" value="00" maxlength="2">
+          <span class="time-sep">:</span>
+          <input class="time-input" value="45" maxlength="2">
+          <span class="time-sep">:</span>
+          <input class="time-input" value="00" maxlength="2">
+          <span style="font-size:10px;color:#888;margin-left:4px">h : m : s</span>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn">Cancel</button>
+        <button class="btn primary">Start Task</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== NEW TASK FORM (Absolute mode) ===== -->
+<div class="section">
+  <div class="label">New Task Form - Absolute Time Mode</div>
+  <div class="new-task-form">
+    <div class="form-header">New Task</div>
+    <div class="form-body">
+      <div class="form-group">
+        <label>Description</label>
+        <input class="form-input" type="text" placeholder="e.g. Finish report" value="Finish report">
+      </div>
+      <div class="form-group">
+        <label>Timer Mode</label>
+        <div class="timer-toggle">
+          <div class="timer-toggle-btn">Countdown</div>
+          <div class="timer-toggle-btn active">Set Time (AM/PM)</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Remind At</label>
+        <div class="time-inputs">
+          <input class="time-input" value="03" maxlength="2">
+          <span class="time-sep">:</span>
+          <input class="time-input" value="30" maxlength="2">
+          <div class="ampm-toggle">
+            <div class="ampm-btn">AM</div>
+            <div class="ampm-btn active">PM</div>
+          </div>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn">Cancel</button>
+        <button class="btn primary">Start Task</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Notification mockup ===== -->
+<div class="section">
+  <div class="label">Desktop Notification (when timer fires)</div>
+  <div style="background:#444;border:1px solid #666;border-radius:8px;padding:14px 18px;width:320px;display:flex;gap:12px;align-items:flex-start;">
+    <div style="width:36px;height:36px;background:#5b9bd5;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;flex-shrink:0;">R</div>
+    <div>
+      <div style="font-size:13px;font-weight:600;color:#eee;">Finish report</div>
+      <div style="font-size:11px;color:#aaa;margin-top:2px;">Time's up - 3:30 PM</div>
+      <div style="margin-top:8px;display:flex;gap:6px;">
+        <button class="btn" style="font-size:10px;padding:3px 8px;">Dismiss</button>
+        <button class="btn" style="font-size:10px;padding:3px 8px;">Mark Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:40px;font-size:10px;color:#555;">reminder@bitcrash wireframe - open in browser to view</div>
+
+</body>
+</html>
+
+<!-- ===== CALENDAR EVENTS IN TASK LIST ===== -->
+<div class="section">
+  <div class="label">Calendar Events Mixed Into Task List (with acknowledgment + reminders)</div>
+  <div class="popup">
+    <div class="popup-header">
+      <h2>Tasks</h2>
+      <div class="header-buttons">
+        <button class="btn danger">Dismiss All Old</button>
+        <button class="btn primary">+ New Task</button>
+      </div>
+    </div>
+    <div class="task-list">
+
+      <!-- Calendar event: UPCOMING with T-15 and T-5 toggles -->
+      <div class="task-row" style="border-left: 3px solid #5b9bd5;">
+        <div class="task-checkbox"></div>
+        <div class="task-body">
+          <div class="task-desc">Team standup</div>
+          <div class="task-meta">
+            <span class="badge" style="color:#5b9bd5;background:#2a3a4a;">CAL</span>
+            <span>10:00 AM - 10:15 AM</span>
+            <span style="color:#7bc8f6;">in 2h 15m</span>
+          </div>
+        </div>
+        <div class="task-actions" style="flex-direction:row; gap:4px; align-items:center;">
+          <button class="task-btn" style="background:#2a4a5a;color:#7bc8f6;border-color:#5b9bd5;font-size:9px;padding:2px 5px;">T-15</button>
+          <button class="task-btn" style="background:#3a3a3a;color:#888;font-size:9px;padding:2px 5px;">T-5</button>
+          <button class="task-btn">Dismiss</button>
+        </div>
+      </div>
+      <div class="annotation">^ T-15 active (highlighted), T-5 inactive (dim). Dismiss removes from list.</div>
+
+      <!-- Calendar event: UPCOMING with both reminders active -->
+      <div class="task-row" style="border-left: 3px solid #5b9bd5;">
+        <div class="task-checkbox"></div>
+        <div class="task-body">
+          <div class="task-desc">Dentist appointment</div>
+          <div class="task-meta">
+            <span class="badge" style="color:#5b9bd5;background:#2a3a4a;">CAL</span>
+            <span>2:30 PM - 3:30 PM</span>
+            <span style="color:#7bc8f6;">in 4h 15m</span>
+          </div>
+        </div>
+        <div class="task-actions" style="flex-direction:row; gap:4px; align-items:center;">
+          <button class="task-btn" style="background:#2a4a5a;color:#7bc8f6;border-color:#5b9bd5;font-size:9px;padding:2px 5px;">T-15</button>
+          <button class="task-btn" style="background:#2a4a5a;color:#7bc8f6;border-color:#5b9bd5;font-size:9px;padding:2px 5px;">T-5</button>
+          <button class="task-btn">Dismiss</button>
+        </div>
+      </div>
+      <div class="annotation">^ Both T-15 and T-5 active. Will notify at 2:15 PM and 2:25 PM.</div>
+
+      <!-- Calendar event: IN PROGRESS (reminders already fired) -->
+      <div class="task-row" style="border-left: 3px solid #4a8c5c; background: #2a3a2e;">
+        <div class="task-checkbox"></div>
+        <div class="task-body">
+          <div class="task-desc">Focus time - deep work</div>
+          <div class="task-meta">
+            <span class="badge" style="color:#4a8c5c;background:#2a3a2e;">CAL</span>
+            <span class="badge" style="color:#4a8c5c;background:#2a3a2e;">NOW</span>
+            <span>9:00 AM - 11:00 AM</span>
+            <span style="color:#6b6;">37 min left</span>
+          </div>
+        </div>
+        <div class="task-actions" style="flex-direction:row; gap:4px; align-items:center;">
+          <button class="task-btn">Dismiss</button>
+        </div>
+      </div>
+      <div class="annotation">^ In progress - T-15/T-5 hidden (already past). Only Dismiss shown.</div>
+
+      <!-- Calendar event: UNACKNOWLEDGED / EXPIRED -->
+      <div class="task-row" style="border-left: 3px solid #f67b7b; background: #3a2a2a;">
+        <div class="task-checkbox"></div>
+        <div class="task-body">
+          <div class="task-desc">Morning sync</div>
+          <div class="task-meta">
+            <span class="badge" style="color:#f67b7b;background:#4a2a2a;">CAL</span>
+            <span class="badge expired">EXPIRED</span>
+            <span>8:30 AM - 8:45 AM</span>
+          </div>
+        </div>
+        <div class="task-actions" style="flex-direction:row; gap:4px; align-items:center;">
+          <button class="task-btn">Dismiss</button>
+        </div>
+      </div>
+      <div class="annotation">^ Expired - check to acknowledge (stop throb), or Dismiss to hide entirely.</div>
+
+      <!-- Manual task (for comparison) -->
+      <div class="task-row">
+        <div class="task-checkbox"></div>
+        <div class="task-body">
+          <div class="task-desc">Finish report</div>
+          <div class="task-meta">
+            <span class="badge absolute">3:30 PM</span>
+            <span>47 min left</span>
+          </div>
+        </div>
+        <div class="task-actions" style="flex-direction:row; gap:4px; align-items:center;">
+          <button class="task-btn">Edit</button>
+          <button class="task-btn">Cancel</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <div class="annotation" style="margin-top:10px; max-width:380px; text-align:left;">
+    Calendar event controls:<br>
+    - [T-15] [T-5]: Toggle early reminders (highlighted = active)<br>
+    - Fires notification at event start minus 15/5 minutes<br>
+    - Only shown for upcoming events (hidden once in progress/past)<br>
+    - [Dismiss]: Remove event from list entirely (won't return until next sync)<br>
+    - Checkbox: Acknowledge (stops throb but keeps visible as faded)<br>
+    - Default T-15/T-5 state configurable in settings
+  </div>
+</div>
+
+

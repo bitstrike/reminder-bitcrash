@@ -1,0 +1,93 @@
+{
+    "notifyPastDue": {
+        "type": "checkbox",
+        "default": true,
+        "description": "Notify on past due items at startup",
+        "tooltip": "If unchecked, tasks/events that expired while the applet was not running will be automatically dismissed on startup"
+    },
+    "respectValarm": {
+        "type": "checkbox",
+        "default": true,
+        "description": "Respect VALARM reminders in calendar events",
+        "tooltip": "If checked, calendar event reminders (VALARM) will trigger notifications at their specified times"
+    },
+    "enableCountdownReminders": {
+        "type": "checkbox",
+        "default": true,
+        "description": "Enable T-15 and T-5 countdown reminders",
+        "tooltip": "If checked, tasks and events show T-15 and T-5 toggle buttons for pre-event notifications"
+    },
+    "allDayReminderHour": {
+        "type": "spinbutton",
+        "default": 8,
+        "min": 0,
+        "max": 23,
+        "step": 1,
+        "description": "All-day event reminder hour",
+        "tooltip": "Hour (0-23) to notify about all-day calendar events"
+    },
+    "allDayReminderMinute": {
+        "type": "spinbutton",
+        "default": 0,
+        "min": 0,
+        "max": 59,
+        "step": 5,
+        "description": "All-day event reminder minute",
+        "tooltip": "Minute (0-59) to notify about all-day calendar events"
+    },
+    "enableSound": {
+        "type": "checkbox",
+        "default": true,
+        "description": "Play sound when a reminder fires"
+    },
+    "soundFile": {
+        "type": "filechooser",
+        "default": "",
+        "description": "Sound file",
+        "tooltip": "Select an audio file (.wav, .ogg, .mp3) to play when a reminder fires"
+    },
+    "previewSound": {
+        "type": "button",
+        "description": "Preview Sound",
+        "tooltip": "Play the selected sound file now",
+        "callback": "on_preview_sound"
+    },
+    "caldavUrl": {
+        "type": "entry",
+        "default": "",
+        "description": "Nextcloud server URL",
+        "tooltip": "e.g. https://cloud.example.com",
+        "min-width": 300
+    },
+    "browserCommand": {
+        "type": "entry",
+        "default": "",
+        "description": "Browser command for authentication",
+        "tooltip": "e.g. firefox %u or /usr/bin/chromium %u (leave blank for system default)",
+        "min-width": 300
+    },
+    "discoverCalendars": {
+        "type": "button",
+        "description": "Discover Calendars",
+        "tooltip": "Fetch available calendars from Nextcloud (must be connected first)",
+        "callback": "on_discover_calendars"
+    },
+    "syncNow": {
+        "type": "button",
+        "description": "Sync Now",
+        "tooltip": "Fetch today's events from enabled calendars immediately",
+        "callback": "on_sync_now"
+    },
+    "caldavCalendars": {
+        "type": "list",
+        "description": "Nextcloud Calendars",
+        "tooltip": "Toggle which calendars to sync events from",
+        "columns": [
+            {"id": "enabled", "title": "Sync", "type": "boolean"},
+            {"id": "displayName", "title": "Calendar", "type": "string"},
+            {"id": "filter", "title": "Filter (keywords)", "type": "string"},
+            {"id": "href", "title": "Path", "type": "string"}
+        ],
+        "default": []
+    }
+}

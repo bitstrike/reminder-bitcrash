@@ -1,0 +1,16 @@
+{
+    "KPlugin": {
+        "Id": "org.bitcrash.reminder",
+        "Name": "Task Reminder",
+        "Description": "Timer and todo list widget with countdown and absolute time reminders for scheduling tasks throughout the day.",
+        "Icon": "alarm-symbolic",
+        "Authors": [{"Name": "bitcrash"}],
+        "Category": "Utilities",
+        "Version": "1.0.0",
+        "License": "GPL-3.0"
+    },
+    "KPackageStructure": "Plasma/Applet",
+    "X-Plasma-API": "declarativeappletscript",
+    "X-Plasma-MainScript": "ui/main.qml",
+    "X-Plasma-Provides": ["org.kde.plasma.notifications"]
+}
