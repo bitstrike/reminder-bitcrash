@@ -18,6 +18,7 @@ Item {
     property string ncAppPassword: ""
     property bool ncConnected: false
     property real startTime: Date.now()
+    property string dataDir: ""
 
     readonly property int maxTasks: 100
 
@@ -175,15 +176,28 @@ Item {
     }
 
     Component.onCompleted: {
-        loadTasks();
-        tryLoadCredentials();
+        // Determine config directory using $HOME
+        var proc = executable.connectSource("echo $HOME");
+    }
+
+    Connections {
+        target: executable
+        function onNewData(source, data) {
+            if (source.indexOf("echo $HOME") !== -1 && data.stdout) {
+                var home = data.stdout.trim();
+                dataDir = home + "/.config/reminder@bitcrash";
+                loadTasks();
+                tryLoadCredentials();
+            }
+            executable.disconnectSource(source);
+        }
     }
 
     // ---- Task operations ----
 
     function loadTasks() {
-        var dir = StandardPaths.writableLocation(StandardPaths.ConfigLocation) + "/reminder@bitcrash";
-        var path = dir + "/tasks.json";
+        if (!dataDir) return;
+        var path = dataDir + "/tasks.json";
         var xhr = new XMLHttpRequest();
         try {
             xhr.open("GET", "file://" + path, false);
@@ -198,10 +212,10 @@ Item {
     }
 
     function saveTasks() {
-        var dir = StandardPaths.writableLocation(StandardPaths.ConfigLocation) + "/reminder@bitcrash";
-        var path = dir + "/tasks.json";
+        if (!dataDir) return;
+        var path = dataDir + "/tasks.json";
         var json = JSON.stringify(tasks, null, 2);
-        executable.connectSource("mkdir -p '" + dir + "' && printf '%s' '" + json.replace(/'/g, "'\\''") + "' > '" + path + "'");
+        executable.connectSource("mkdir -p '" + dataDir + "' && printf '%s' '" + json.replace(/'/g, "'\\''") + "' > '" + path + "'");
     }
 
     function toggleComplete(task) {
