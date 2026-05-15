@@ -13,64 +13,60 @@ ColumnLayout {
     signal dismiss()
     signal edit()
 
-    readonly property bool isCalendar: taskData.source === "calendar"
-    readonly property bool isExpired: !taskData.completed && !taskData.dismissed &&
+    readonly property bool isCalendar: taskData && taskData.source === "calendar"
+    readonly property bool isExpired: taskData && !taskData.completed && !taskData.dismissed &&
         taskData.targetTime && new Date(taskData.targetTime).getTime() <= Date.now()
-    readonly property bool isStale: isExpired && !Timer.isToday(taskData.targetTime)
 
     spacing: 2
-    Layout.fillWidth: true
 
+    // Separator
     Rectangle {
         Layout.fillWidth: true
         height: 1
-        color: PlasmaCore.Theme.separatorColor
-        opacity: 0.3
+        color: PlasmaCore.Theme.textColor
+        opacity: 0.1
     }
 
     // Line 1: checkbox + description + buttons
     RowLayout {
         Layout.fillWidth: true
-        Layout.margins: 4
+        Layout.leftMargin: 8
+        Layout.rightMargin: 8
+        Layout.topMargin: 4
         spacing: 6
 
-        // Checkbox
         PlasmaComponents.CheckBox {
-            checked: taskData.completed || false
+            checked: taskData ? (taskData.completed || false) : false
             onToggled: taskRow.toggleComplete()
         }
 
-        // Description
         PlasmaComponents.Label {
-            text: taskData.description || ""
+            text: taskData ? (taskData.description || "") : ""
             Layout.fillWidth: true
             elide: Text.ElideRight
-            opacity: taskData.completed ? 0.5 : (isStale ? 0.6 : 1.0)
-            font.strikeout: taskData.completed || isStale
+            opacity: taskData && taskData.completed ? 0.5 : 1.0
+            font.strikeout: taskData && taskData.completed
         }
 
-        // Action buttons
         PlasmaComponents.ToolButton {
             icon.name: "document-edit"
-            visible: !isCalendar && !taskData.completed
+            visible: !isCalendar && taskData && !taskData.completed
             onClicked: taskRow.edit()
-            PlasmaComponents.ToolTip { text: "Edit" }
         }
 
         PlasmaComponents.ToolButton {
             icon.name: "edit-delete"
             onClicked: taskRow.dismiss()
-            PlasmaComponents.ToolTip { text: isExpired || taskData.completed ? "Dismiss" : "Cancel" }
         }
     }
 
-    // Line 2: badges + time info
+    // Line 2: status info
     RowLayout {
         Layout.fillWidth: true
-        Layout.leftMargin: 36
-        spacing: 6
+        Layout.leftMargin: 40
+        Layout.bottomMargin: 4
+        spacing: 8
 
-        // CAL badge
         PlasmaComponents.Label {
             visible: isCalendar
             text: "CAL"
@@ -78,59 +74,29 @@ ColumnLayout {
             color: "#5b9bd5"
         }
 
-        // ALL DAY badge
         PlasmaComponents.Label {
-            visible: taskData.allDay || false
+            visible: taskData && taskData.allDay
             text: "ALL DAY"
             font.pointSize: PlasmaCore.Theme.smallestFont.pointSize
-            opacity: 0.7
+            opacity: 0.6
         }
 
-        // Status badge
         PlasmaComponents.Label {
-            visible: !taskData.allDay && (isStale || isExpired || taskData.completed || hasTarget())
-            text: getBadgeText()
+            visible: taskData && !taskData.allDay && taskData.targetTime
+            text: getStatusText()
             font.pointSize: PlasmaCore.Theme.smallestFont.pointSize
-            color: getBadgeColor()
-        }
-
-        // Time info
-        PlasmaComponents.Label {
-            visible: !taskData.allDay && hasTarget()
-            text: getTimeText()
-            font.pointSize: PlasmaCore.Theme.smallestFont.pointSize
+            color: isExpired ? "#f67b7b" : PlasmaCore.Theme.textColor
             opacity: 0.7
         }
     }
 
-    function hasTarget() {
-        return taskData.targetTime !== undefined && taskData.targetTime !== null;
-    }
-
-    function getBadgeText() {
-        if (isStale) return Timer.isYesterday(taskData.targetTime) ? "YESTERDAY" : "OLD";
-        if (isExpired) return "EXPIRED";
-        if (taskData.completed) return "Done";
-        if (taskData.timerMode === "countdown") return "COUNTDOWN";
-        if (taskData.targetTime) return Timer.formatTimeAmPm(new Date(taskData.targetTime));
-        return "";
-    }
-
-    function getBadgeColor() {
-        if (isStale || isExpired) return "#f67b7b";
-        if (taskData.completed) return "#6b6";
-        if (taskData.timerMode === "countdown") return "#7bc8f6";
-        return "#f6c87b";
-    }
-
-    function getTimeText() {
-        if (isStale || isExpired)
-            return "was " + Timer.formatTimeAmPm(new Date(taskData.targetTime));
-        if (taskData.completed) return "";
+    function getStatusText() {
+        if (!taskData || !taskData.targetTime) return "";
         var now = Date.now();
         var target = new Date(taskData.targetTime).getTime();
+        if (taskData.completed) return "Done";
+        if (target <= now) return "EXPIRED - was " + Timer.formatTimeAmPm(new Date(taskData.targetTime));
         var remaining = Math.max(0, Math.floor((target - now) / 1000));
-        if (remaining <= 0) return "";
-        return Timer.formatCountdown(remaining) + " left";
+        return Timer.formatTimeAmPm(new Date(taskData.targetTime)) + " - " + Timer.formatCountdown(remaining) + " left";
     }
 }

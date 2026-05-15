@@ -1,42 +1,42 @@
 import QtQuick 2.15
 import QtQuick.Layouts 1.15
 import QtQuick.Controls 2.15
+import org.kde.plasma.core 2.0 as PlasmaCore
 import org.kde.plasma.components 3.0 as PlasmaComponents
 
 Dialog {
     id: dialog
 
-    property bool editing: false
     property var editTask: null
+    property bool isEditing: false
 
-    signal accepted(var task)
+    signal taskSaved(var task, bool isNew)
 
-    title: editing ? "Edit Task" : "New Task"
+    title: isEditing ? "Edit Task" : "New Task"
     modal: true
-    standardButtons: Dialog.Ok | Dialog.Cancel
-    width: 360
+    width: 340
+    height: 280
+    x: (parent.width - width) / 2
+    y: (parent.height - height) / 2
 
     property string currentMode: "countdown"
 
+    function openWith(task) {
+        editTask = task;
+        isEditing = true;
+        descField.text = task.description;
+        currentMode = task.timerMode || "countdown";
+        if (currentMode === "countdown" && task.countdownSeconds) {
+            var cs = task.countdownSeconds;
+            hoursField.value = Math.floor(cs / 3600);
+            minutesField.value = Math.floor((cs % 3600) / 60);
+            secondsField.value = cs % 60;
+        }
+        open();
+    }
+
     onOpened: {
-        if (editing && editTask) {
-            descField.text = editTask.description;
-            currentMode = editTask.timerMode || "countdown";
-            if (currentMode === "countdown" && editTask.countdownSeconds) {
-                var cs = editTask.countdownSeconds;
-                hoursField.value = Math.floor(cs / 3600);
-                minutesField.value = Math.floor((cs % 3600) / 60);
-                secondsField.value = cs % 60;
-            } else if (currentMode === "absolute" && editTask.targetTime) {
-                var d = new Date(editTask.targetTime);
-                var h = d.getHours();
-                ampmToggle.checked = h >= 12;
-                h = h % 12;
-                if (h === 0) h = 12;
-                absHourField.value = h;
-                absMinField.value = d.getMinutes();
-            }
-        } else {
+        if (!isEditing) {
             descField.text = "";
             currentMode = "countdown";
             hoursField.value = 0;
@@ -44,22 +44,32 @@ Dialog {
             secondsField.value = 0;
             absHourField.value = 12;
             absMinField.value = 0;
-            ampmToggle.checked = true;
+            ampmSwitch.checked = true;
         }
         descField.forceActiveFocus();
     }
 
-    function openWith(task) {
-        editTask = task;
-        editing = true;
-        open();
+    onClosed: {
+        isEditing = false;
+        editTask = null;
+    }
+
+    footer: DialogButtonBox {
+        PlasmaComponents.Button {
+            text: "Cancel"
+            DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
+        }
+        PlasmaComponents.Button {
+            text: isEditing ? "Save" : "Start Task"
+            DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
+        }
     }
 
     onAccepted: {
         var desc = descField.text.trim();
         if (!desc) return;
 
-        var task = editing ? editTask : {
+        var task = isEditing ? editTask : {
             id: "t" + Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
             description: "",
             timerMode: "countdown",
@@ -82,25 +92,23 @@ Dialog {
         } else {
             var ah = absHourField.value;
             var am = absMinField.value;
-            if (!ampmToggle.checked) { // AM
-                if (ah === 12) ah = 0;
-            } else { // PM
-                if (ah !== 12) ah += 12;
-            }
+            if (!ampmSwitch.checked) { if (ah === 12) ah = 0; }
+            else { if (ah !== 12) ah += 12; }
             var target = new Date();
             target.setHours(ah, am, 0, 0);
             task.targetTime = target.toISOString();
             task.countdownSeconds = null;
         }
 
-        dialog.accepted(task);
+        dialog.taskSaved(task, !isEditing);
+        close();
     }
 
     ColumnLayout {
         anchors.fill: parent
-        spacing: 12
+        anchors.margins: 12
+        spacing: 10
 
-        // Description
         PlasmaComponents.Label { text: "Description" }
         PlasmaComponents.TextField {
             id: descField
@@ -108,7 +116,6 @@ Dialog {
             placeholderText: "e.g. Lunch break"
         }
 
-        // Mode toggle
         PlasmaComponents.Label { text: "Timer Mode" }
         RowLayout {
             PlasmaComponents.Button {
@@ -123,32 +130,27 @@ Dialog {
             }
         }
 
-        // Countdown inputs
-        ColumnLayout {
+        // Countdown
+        RowLayout {
             visible: currentMode === "countdown"
-            PlasmaComponents.Label { text: "Duration (H:M:S)" }
-            RowLayout {
-                SpinBox { id: hoursField; from: 0; to: 23; value: 0 }
-                PlasmaComponents.Label { text: ":" }
-                SpinBox { id: minutesField; from: 0; to: 59; value: 0 }
-                PlasmaComponents.Label { text: ":" }
-                SpinBox { id: secondsField; from: 0; to: 59; value: 0 }
-            }
+            PlasmaComponents.Label { text: "H:" }
+            SpinBox { id: hoursField; from: 0; to: 23; value: 0; implicitWidth: 70 }
+            PlasmaComponents.Label { text: "M:" }
+            SpinBox { id: minutesField; from: 0; to: 59; value: 0; implicitWidth: 70 }
+            PlasmaComponents.Label { text: "S:" }
+            SpinBox { id: secondsField; from: 0; to: 59; value: 0; implicitWidth: 70 }
         }
 
-        // Absolute time inputs
-        ColumnLayout {
+        // Absolute
+        RowLayout {
             visible: currentMode === "absolute"
-            PlasmaComponents.Label { text: "Remind At" }
-            RowLayout {
-                SpinBox { id: absHourField; from: 1; to: 12; value: 12 }
-                PlasmaComponents.Label { text: ":" }
-                SpinBox { id: absMinField; from: 0; to: 59; value: 0 }
-                PlasmaComponents.Switch {
-                    id: ampmToggle
-                    text: checked ? "PM" : "AM"
-                    checked: true
-                }
+            SpinBox { id: absHourField; from: 1; to: 12; value: 12; implicitWidth: 70 }
+            PlasmaComponents.Label { text: ":" }
+            SpinBox { id: absMinField; from: 0; to: 59; value: 0; implicitWidth: 70 }
+            PlasmaComponents.Switch {
+                id: ampmSwitch
+                text: checked ? "PM" : "AM"
+                checked: true
             }
         }
     }

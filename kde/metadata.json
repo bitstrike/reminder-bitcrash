@@ -7,10 +7,9 @@
         "Authors": [{"Name": "bitcrash"}],
         "Category": "Utilities",
         "Version": "1.0.0",
-        "License": "GPL-3.0"
+        "License": "GPL-3.0",
+        "ServiceTypes": ["Plasma/Applet"]
     },
-    "KPackageStructure": "Plasma/Applet",
     "X-Plasma-API": "declarativeappletscript",
-    "X-Plasma-MainScript": "ui/main.qml",
-    "X-Plasma-Provides": ["org.kde.plasma.notifications"]
+    "X-Plasma-MainScript": "ui/main.qml"
 }

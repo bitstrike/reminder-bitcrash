@@ -5,34 +5,48 @@ import org.kde.plasma.plasmoid 2.0
 import org.kde.plasma.core 2.0 as PlasmaCore
 import org.kde.plasma.components 3.0 as PlasmaComponents
 import org.kde.plasma.extras 2.0 as PlasmaExtras
-import org.kde.notification 1.0
 
 import "../code/timer.js" as Timer
 import "../code/nextcloud.js" as Nextcloud
 
-PlasmoidItem {
+Item {
     id: root
 
     property var tasks: []
     property var calendarEvents: []
-    property var ncLoginName: ""
-    property var ncAppPassword: ""
+    property string ncLoginName: ""
+    property string ncAppPassword: ""
     property bool ncConnected: false
     property real startTime: Date.now()
 
     readonly property int maxTasks: 100
 
     Plasmoid.icon: "alarm-symbolic"
-    toolTipMainText: getTooltipText()
-    toolTipSubText: ""
+    Plasmoid.toolTipMainText: "Task Reminder"
+    Plasmoid.toolTipSubText: ncConnected ? "Connected" : "No tasks pending"
 
-    compactRepresentation: PlasmaComponents.Label {
-        text: getPanelLabel()
-        font.pointSize: PlasmaCore.Theme.smallestFont.pointSize
-        Layout.minimumWidth: implicitWidth
+    Plasmoid.compactRepresentation: Item {
+        PlasmaCore.IconItem {
+            id: panelIcon
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+            width: parent.height
+            height: parent.height
+            source: "alarm-symbolic"
+        }
+        PlasmaComponents.Label {
+            id: panelLabel
+            anchors.left: panelIcon.right
+            anchors.leftMargin: 4
+            anchors.verticalCenter: parent.verticalCenter
+            text: getPanelLabel()
+            font.pointSize: PlasmaCore.Theme.smallestFont.pointSize
+        }
+        Layout.minimumWidth: panelIcon.width + panelLabel.implicitWidth + 8
+
         MouseArea {
             anchors.fill: parent
-            onClicked: root.expanded = !root.expanded
+            onClicked: plasmoid.expanded = !plasmoid.expanded
         }
 
         Timer {
@@ -40,15 +54,17 @@ PlasmoidItem {
             running: true
             repeat: true
             onTriggered: {
-                parent.text = getPanelLabel();
+                panelLabel.text = getPanelLabel();
                 doTick();
             }
         }
     }
 
-    fullRepresentation: ColumnLayout {
+    Plasmoid.fullRepresentation: ColumnLayout {
         Layout.preferredWidth: 380
         Layout.preferredHeight: 400
+        Layout.minimumWidth: 300
+        Layout.minimumHeight: 200
 
         // Header
         RowLayout {
@@ -83,12 +99,13 @@ PlasmoidItem {
             ListView {
                 id: taskList
                 model: getVisibleItems()
+                clip: true
                 delegate: TaskRow {
                     width: taskList.width
                     taskData: modelData
                     onToggleComplete: root.toggleComplete(modelData)
                     onDismiss: root.dismissTask(modelData)
-                    onEdit: editTaskDialog.openWith(modelData)
+                    onEdit: newTaskDialog.openWith(modelData)
                 }
 
                 PlasmaExtras.PlaceholderMessage {
@@ -100,7 +117,7 @@ PlasmoidItem {
             }
         }
 
-        // Footer - Nextcloud status
+        // Footer
         RowLayout {
             Layout.fillWidth: true
             Layout.margins: 4
@@ -115,44 +132,30 @@ PlasmoidItem {
             PlasmaComponents.ToolButton {
                 icon.name: ncConnected ? "network-disconnect" : "network-connect"
                 onClicked: ncConnected ? ncDisconnect() : ncConnect()
-                PlasmaComponents.ToolTip { text: ncConnected ? "Disconnect" : "Connect to Nextcloud" }
             }
 
             PlasmaComponents.ToolButton {
                 icon.name: "view-refresh"
                 visible: ncConnected
                 onClicked: doCalendarSync()
-                PlasmaComponents.ToolTip { text: "Sync Now" }
             }
         }
     }
 
-    // New Task Dialog
+    // New/Edit Task Dialog
     NewTaskDialog {
         id: newTaskDialog
-        onAccepted: function(task) {
-            if (tasks.filter(function(t){return !t.dismissed;}).length >= maxTasks) {
-                showNotification("Maximum of " + maxTasks + " tasks reached.");
-                return;
+        onTaskSaved: function(task, isNew) {
+            if (isNew) {
+                if (tasks.filter(function(t){return !t.dismissed;}).length >= maxTasks) {
+                    sendNotification("Maximum of " + maxTasks + " tasks reached.");
+                    return;
+                }
+                tasks.push(task);
             }
-            tasks.push(task);
             saveTasks();
+            taskList.model = getVisibleItems();
         }
-    }
-
-    NewTaskDialog {
-        id: editTaskDialog
-        editing: true
-        onAccepted: function(task) {
-            saveTasks();
-        }
-    }
-
-    // Notification component
-    Notification {
-        id: notifier
-        componentName: "reminder@bitcrash"
-        eventId: "reminder"
     }
 
     // Sync timer (10 minutes)
@@ -164,6 +167,13 @@ PlasmoidItem {
         onTriggered: doCalendarSync()
     }
 
+    // Notification via executable (knotify/notify-send)
+    PlasmaCore.DataSource {
+        id: executable
+        engine: "executable"
+        onNewData: disconnectSource(sourceName)
+    }
+
     Component.onCompleted: {
         loadTasks();
         tryLoadCredentials();
@@ -172,39 +182,38 @@ PlasmoidItem {
     // ---- Task operations ----
 
     function loadTasks() {
-        var path = StandardPaths.writableLocation(StandardPaths.ConfigLocation) + "/reminder@bitcrash/tasks.json";
+        var dir = StandardPaths.writableLocation(StandardPaths.ConfigLocation) + "/reminder@bitcrash";
+        var path = dir + "/tasks.json";
         var xhr = new XMLHttpRequest();
-        xhr.open("GET", "file://" + path, false);
         try {
+            xhr.open("GET", "file://" + path, false);
             xhr.send();
             if (xhr.status === 200 && xhr.responseText)
                 tasks = JSON.parse(xhr.responseText);
+            else
+                tasks = [];
         } catch (e) {
             tasks = [];
         }
     }
 
     function saveTasks() {
-        var path = StandardPaths.writableLocation(StandardPaths.ConfigLocation) + "/reminder@bitcrash/tasks.json";
-        var json = JSON.stringify(tasks, null, 2);
-        // Use Process to write file
-        var proc = Qt.createQmlObject(
-            'import QtQuick 2.0; import org.kde.plasma.core 2.0; DataSource { engine: "executable"; connectedSources: [] }',
-            root);
         var dir = StandardPaths.writableLocation(StandardPaths.ConfigLocation) + "/reminder@bitcrash";
-        proc.connectedSources.push("mkdir -p '" + dir + "' && cat > '" + path + "' << 'TASKEOF'\n" + json + "\nTASKEOF");
-        proc.destroy();
-        tasksChanged();
+        var path = dir + "/tasks.json";
+        var json = JSON.stringify(tasks, null, 2);
+        executable.connectSource("mkdir -p '" + dir + "' && printf '%s' '" + json.replace(/'/g, "'\\''") + "' > '" + path + "'");
     }
 
     function toggleComplete(task) {
         task.completed = !task.completed;
         saveTasks();
+        taskList.model = getVisibleItems();
     }
 
     function dismissTask(task) {
         task.dismissed = true;
         saveTasks();
+        taskList.model = getVisibleItems();
     }
 
     function dismissAllOld() {
@@ -222,6 +231,7 @@ PlasmoidItem {
                 e.dismissed = true;
         }
         saveTasks();
+        taskList.model = getVisibleItems();
     }
 
     // ---- Tick loop ----
@@ -229,11 +239,9 @@ PlasmoidItem {
     function doTick() {
         var now = Date.now();
         var fired = false;
-        var cfg = plasmoid.configuration;
-        var notifyPastDue = cfg.notifyPastDue;
-        var enableCountdown = cfg.enableCountdownReminders;
+        var notifyPastDue = plasmoid.configuration.notifyPastDue;
+        var enableCountdown = plasmoid.configuration.enableCountdownReminders;
 
-        // Process manual tasks
         for (var i = 0; i < tasks.length; i++) {
             var task = tasks[i];
             if (task.completed || task.dismissed) continue;
@@ -255,16 +263,16 @@ PlasmoidItem {
                 if (task._remind15 !== false && !task._notified15) {
                     var t15 = target - 15 * 60 * 1000;
                     if (t15 <= now) {
-                        var remaining15 = Math.max(0, Math.floor((target - now) / 60000));
-                        pending.push({ triggerTime: t15, msg: task.description + " in " + remaining15 + " min",
+                        var r15 = Math.max(0, Math.floor((target - now) / 60000));
+                        pending.push({ triggerTime: t15, msg: task.description + " in " + r15 + " min",
                             mark: function() { task._notified15 = true; } });
                     }
                 }
                 if (task._remind5 !== false && !task._notified5) {
                     var t5 = target - 5 * 60 * 1000;
                     if (t5 <= now) {
-                        var remaining5 = Math.max(0, Math.floor((target - now) / 60000));
-                        pending.push({ triggerTime: t5, msg: task.description + " in " + remaining5 + " min",
+                        var r5 = Math.max(0, Math.floor((target - now) / 60000));
+                        pending.push({ triggerTime: t5, msg: task.description + " in " + r5 + " min",
                             mark: function() { task._notified5 = true; } });
                     }
                 }
@@ -273,13 +281,13 @@ PlasmoidItem {
                     for (var pi = 0; pi < pending.length; pi++) pending[pi].mark();
                     if (notifyPastDue || pending[0].triggerTime >= startTime) {
                         fired = true;
-                        showNotification(pending[0].msg);
+                        sendNotification(pending[0].msg);
                     }
                 }
             }
         }
 
-        // Process calendar events
+        // Calendar events
         for (var ci = 0; ci < calendarEvents.length; ci++) {
             var event = calendarEvents[ci];
             if (event.completed || event.dismissed || event.allDay) continue;
@@ -319,33 +327,12 @@ PlasmoidItem {
                             mark: function() { event._notified5 = true; } });
                     }
                 }
-                // VALARM
-                if (cfg.respectValarm && event.alarms && event.alarms.length > 0) {
-                    if (!event._valarmNotified) event._valarmNotified = {};
-                    if (!event._valarmEnabled) event._valarmEnabled = {};
-                    for (var vi = 0; vi < event.alarms.length; vi++) {
-                        var mins = event.alarms[vi];
-                        if (event._valarmEnabled[mins] === false) continue;
-                        if (event._valarmNotified[mins]) continue;
-                        var vTrigger = eTarget - mins * 60 * 1000;
-                        if (vTrigger <= now) {
-                            var vRemaining = Math.max(0, Math.floor((eTarget - now) / 60000));
-                            var vLabel = vRemaining >= 60
-                                ? Math.floor(vRemaining / 60) + "h" + (vRemaining % 60 > 0 ? vRemaining % 60 + "m" : "")
-                                : vRemaining + " min";
-                            (function(m) {
-                                ePending.push({ triggerTime: vTrigger, msg: event.description + " in " + vLabel,
-                                    mark: function() { event._valarmNotified[m] = true; } });
-                            })(mins);
-                        }
-                    }
-                }
                 if (ePending.length > 0) {
                     ePending.sort(function(a, b) { return b.triggerTime - a.triggerTime; });
                     for (var epi = 0; epi < ePending.length; epi++) ePending[epi].mark();
                     if (notifyPastDue || ePending[0].triggerTime >= startTime) {
                         fired = true;
-                        showNotification(ePending[0].msg);
+                        sendNotification(ePending[0].msg);
                     }
                 }
             }
@@ -360,13 +347,11 @@ PlasmoidItem {
             msg += " - " + Timer.formatTimeAmPm(new Date(task.targetTime));
         else
             msg += " - countdown finished";
-        showNotification(msg);
+        sendNotification(msg);
     }
 
-    function showNotification(msg) {
-        notifier.title = "Task Reminder";
-        notifier.text = msg;
-        notifier.sendEvent();
+    function sendNotification(msg) {
+        executable.connectSource("notify-send 'Task Reminder' '" + msg.replace(/'/g, "'\\''") + "' -i alarm-symbolic");
         maybePlaySound();
     }
 
@@ -374,9 +359,7 @@ PlasmoidItem {
         if (!plasmoid.configuration.enableSound) return;
         var soundFile = plasmoid.configuration.soundFile;
         if (!soundFile) return;
-        // Use DataSource to spawn audio player
-        var cmd = "paplay '" + soundFile + "' 2>/dev/null || aplay '" + soundFile + "' 2>/dev/null || play '" + soundFile + "' 2>/dev/null";
-        executable.exec(cmd);
+        executable.connectSource("paplay '" + soundFile + "' 2>/dev/null || aplay '" + soundFile + "' 2>/dev/null");
     }
 
     // ---- Panel label ----
@@ -391,11 +374,6 @@ PlasmoidItem {
         if (desc.length > 15) desc = desc.substring(0, 14) + "\u2026";
         if (remaining <= 0) return desc + " - expired";
         return desc + " - " + Timer.formatCountdown(remaining);
-    }
-
-    function getTooltipText() {
-        if (ncConnected) return "Task Reminder - Connected";
-        return "Task Reminder";
     }
 
     function getNextActiveTask() {
@@ -441,27 +419,25 @@ PlasmoidItem {
     // ---- Nextcloud ----
 
     function tryLoadCredentials() {
-        // KDE uses kwallet - for simplicity, store in config (less secure but functional)
-        // A production version should use org.kde.KWallet
         var url = plasmoid.configuration.caldavUrl;
         if (!url) return;
-        // Credentials would be loaded from kwallet here
-        // For now, rely on the login flow storing them in a local file
+        // For now credentials must be re-entered each session
+        // TODO: kwallet integration
     }
 
     function ncConnect() {
         var url = plasmoid.configuration.caldavUrl;
         if (!url) {
-            showNotification("Set Nextcloud URL in settings first.");
+            sendNotification("Set Nextcloud URL in settings first.");
             return;
         }
         var flowData = Nextcloud.loginFlowInit(url);
         if (!flowData) {
-            showNotification("Failed to contact server.");
+            sendNotification("Failed to contact server.");
             return;
         }
         Qt.openUrlExternally(flowData.loginUrl);
-        showNotification("Approve access in your browser...");
+        sendNotification("Approve access in your browser...");
         pollTimer.flowData = flowData;
         pollTimer.attempts = 0;
         pollTimer.start();
@@ -472,7 +448,8 @@ PlasmoidItem {
         ncLoginName = "";
         ncAppPassword = "";
         calendarEvents = [];
-        showNotification("Disconnected from Nextcloud.");
+        taskList.model = getVisibleItems();
+        sendNotification("Disconnected from Nextcloud.");
     }
 
     Timer {
@@ -483,15 +460,15 @@ PlasmoidItem {
         repeat: true
         onTriggered: {
             attempts++;
-            if (attempts > 150) { stop(); showNotification("Login timed out."); return; }
+            if (attempts > 150) { stop(); sendNotification("Login timed out."); return; }
             var result = Nextcloud.loginFlowPoll(flowData.pollUrl, flowData.pollToken);
             if (result === null) return;
-            if (result === false) { stop(); showNotification("Login expired."); return; }
+            if (result === false) { stop(); sendNotification("Login expired."); return; }
             stop();
             ncLoginName = result.loginName;
             ncAppPassword = result.appPassword;
             ncConnected = true;
-            showNotification("Connected as " + result.loginName);
+            sendNotification("Connected as " + result.loginName);
             doCalendarSync();
         }
     }
@@ -522,7 +499,6 @@ PlasmoidItem {
                 var events = Nextcloud.fetchEvents(url, ncLoginName, ncAppPassword, cal.href, rangeStart, rangeEnd);
                 if (!events) continue;
 
-                // Keyword filter
                 if (cal.filter && cal.filter.trim()) {
                     var keywords = cal.filter.split(",").map(function(k){return k.trim().toLowerCase();}).filter(function(k){return k;});
                     if (keywords.length > 0) {
@@ -564,7 +540,7 @@ PlasmoidItem {
             } catch (e) {
                 if (e.authFailed) {
                     ncConnected = false;
-                    showNotification("Session expired. Reconnect.");
+                    sendNotification("Session expired. Reconnect.");
                     return;
                 }
             }
@@ -591,13 +567,6 @@ PlasmoidItem {
         }
 
         calendarEvents = newEvents;
-    }
-
-    // Executable helper for sound playback
-    PlasmaCore.DataSource {
-        id: executable
-        engine: "executable"
-        function exec(cmd) { connectSource(cmd); }
-        onNewData: { disconnectSource(sourceName); }
+        taskList.model = getVisibleItems();
     }
 }
