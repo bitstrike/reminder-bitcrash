@@ -1,11 +1,11 @@
 {
     "KPlugin": {
         "Id": "org.bitcrash.reminder",
-        "Name": "Task Reminder",
-        "Description": "Timer and todo list widget with countdown and absolute time reminders for scheduling tasks throughout the day.",
+        "Name": "Task Reminder - reminder@bitcrash",
+        "Description": "Timer and todo list widget with countdown and absolute time reminders for scheduling tasks throughout the day. Includes Nextcloud CalDAV ingtegration.",
         "Icon": "alarm-symbolic",
         "Authors": [{"Name": "bitcrash"}],
-        "Category": "Utilities",
+        "Category": "Date and Time",
         "Version": "1.0.0",
         "License": "GPL-3.0",
         "ServiceTypes": ["Plasma/Applet"]
