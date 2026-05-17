@@ -120,6 +120,8 @@ class ReminderApplet extends Applet.TextIconApplet {
         this._ncAppPassword = null;
         this._ncPollId = null;
         this._syncId = null;
+        this._syncInProgress = false;
+        this._manualSyncRequested = false;
         this._authFailed = false;
         this._lastSyncTime = null;
         this._syncFailCount = 0;
@@ -1360,80 +1362,104 @@ class ReminderApplet extends Applet.TextIconApplet {
     _doCalendarSync() {
         if (!this._ncConnected || !this.caldavUrl) return;
         if (this._authFailed) return;
+        if (this._syncInProgress) return;
         if (!this.caldavCalendars || !Array.isArray(this.caldavCalendars)) return;
 
         let enabledCals = this.caldavCalendars.filter(c => c.enabled);
         if (enabledCals.length === 0) return;
 
-        // Fetch today's events (midnight to midnight)
+        this._syncInProgress = true;
+
         let now = new Date();
         let rangeStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
         let rangeEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
 
-        let newEvents = [];
-        for (let cal of enabledCals) {
-            try {
-                global.log(UUID + ": Syncing calendar: " + cal.displayName + " (" + cal.href + ")");
-                let events = Nextcloud.fetchEvents(
-                    this.caldavUrl, this._ncLoginName, this._ncAppPassword,
-                    cal.href, rangeStart, rangeEnd
-                );
-                global.log(UUID + ": Got " + (events ? events.length : "null") + " events from " + cal.displayName);
-                if (events) {
-                    // Apply keyword filter if set
-                    if (cal.filter && cal.filter.trim()) {
-                        let keywords = cal.filter.split(",").map(k => k.trim().toLowerCase()).filter(k => k);
-                        if (keywords.length > 0) {
-                            events = events.filter(ev => {
-                                let text = ((ev.summary || "") + " " + (ev.description || "")).toLowerCase();
-                                return keywords.some(kw => text.includes(kw));
-                            });
-                        }
+        let config = JSON.stringify({
+            serverUrl: this.caldavUrl,
+            loginName: this._ncLoginName,
+            appPassword: this._ncAppPassword,
+            rangeStart: rangeStart.toISOString(),
+            rangeEnd: rangeEnd.toISOString(),
+            calendars: enabledCals.map(c => ({
+                displayName: c.displayName,
+                href: c.href,
+                filter: c.filter || ""
+            }))
+        });
+
+        try {
+            let workerPath = AppletDir + "/sync-worker.js";
+            let proc = Gio.Subprocess.new(
+                ["cjs", workerPath],
+                Gio.SubprocessFlags.STDIN_PIPE | Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
+            );
+            proc.communicate_utf8_async(config, null, Lang.bind(this, function (proc, asyncResult) {
+                this._syncInProgress = false;
+                try {
+                    let [ok, stdout, stderr] = proc.communicate_utf8_finish(asyncResult);
+                    if (!ok || !stdout) {
+                        global.logError(UUID + ": Sync worker returned no output. stderr: " + (stderr || ""));
+                        return;
                     }
-                    for (let ev of events) {
-                        let targetTime = ev.dtstart;
-                        let endTime = ev.dtend;
-                        // All-day events: use configured reminder time instead of midnight
-                        if (ev.allDay) {
-                            let today = new Date();
-                            let h = this.allDayReminderHour || 8;
-                            let m = this.allDayReminderMinute || 0;
-                            let reminderDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), h, m, 0);
-                            targetTime = reminderDate.toISOString();
-                            endTime = null;
-                        }
-                        newEvents.push({
-                            id: "cal-" + ev.uid,
-                            source: "calendar",
-                            description: ev.summary,
-                            targetTime: targetTime,
-                            endTime: endTime,
-                            calendarName: cal.displayName,
-                            alarms: ev.alarms || [],
-                            allDay: ev.allDay || false,
-                            completed: false,
-                            dismissed: false,
-                            _notified: false,
-                            _valarmNotified: {},
-                            _valarmEnabled: {}
-                        });
-                    }
+                    let results = JSON.parse(stdout);
+                    this._processSyncResults(results);
+                } catch (e) {
+                    global.logError(UUID + ": Sync worker error: " + e.message);
                 }
-            } catch (e) {
-                if (e.authFailed) {
-                    this._authFailed = true;
-                    this._ncConnected = false;
-                    this._stopCalendarSync();
-                    Nextcloud.clearCredentials(this.caldavUrl);
-                    Main.notify("Task Reminder", "Nextcloud session expired. Reconnect from the context menu.");
-                    return;
-                }
-                this._syncFailCount++;
-                if (this._syncFailCount === 1) {
-                    global.logError(UUID + ": Sync failed for " + cal.displayName + ": " + e.message);
-                }
+            }));
+        } catch (e) {
+            this._syncInProgress = false;
+            global.logError(UUID + ": Failed to spawn sync worker: " + e.message);
+        }
+    }
+
+    _processSyncResults(results) {
+        if (results.authFailed) {
+            this._authFailed = true;
+            this._ncConnected = false;
+            this._stopCalendarSync();
+            Nextcloud.clearCredentials(this.caldavUrl);
+            Main.notify("Task Reminder", "Nextcloud session expired. Reconnect from the context menu.");
+            return;
+        }
+
+        if (results.errors.length > 0) {
+            this._syncFailCount++;
+            if (this._syncFailCount === 1) {
+                global.logError(UUID + ": Sync failed: " + results.errors[0]);
             }
         }
+
+        // Build new calendar events from thread results
+        let newEvents = [];
+        for (let ev of results.events) {
+            let targetTime = ev.dtstart;
+            let endTime = ev.dtend;
+            if (ev.allDay) {
+                let today = new Date();
+                let h = this.allDayReminderHour || 8;
+                let m = this.allDayReminderMinute || 0;
+                let reminderDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), h, m, 0);
+                targetTime = reminderDate.toISOString();
+                endTime = null;
+            }
+            newEvents.push({
+                id: "cal-" + ev.uid,
+                source: "calendar",
+                description: ev.summary,
+                targetTime: targetTime,
+                endTime: endTime,
+                calendarName: ev.calendarName,
+                alarms: ev.alarms,
+                allDay: ev.allDay,
+                completed: false,
+                dismissed: false,
+                _notified: false,
+                _valarmNotified: {},
+                _valarmEnabled: {}
+            });
+        }
+
         global.log(UUID + ": Total calendar events after sync: " + newEvents.length);
 
         // Merge: preserve acknowledged/dismissed state from existing events
@@ -1472,6 +1498,10 @@ class ReminderApplet extends Applet.TextIconApplet {
         this._syncFailCount = 0;
         this._lastSyncTime = new Date();
         this._updateTooltip();
+        if (this._manualSyncRequested) {
+            this._manualSyncRequested = false;
+            Main.notify("Task Reminder", "Calendar sync complete. " + this.calendarEvents.filter(e => !e.dismissed).length + " events today.");
+        }
     }
 
     _ncConnect() {
@@ -1654,8 +1684,8 @@ class ReminderApplet extends Applet.TextIconApplet {
 
     // Settings button callback for Sync Now
     on_sync_now() {
+        this._manualSyncRequested = true;
         this._doCalendarSync();
-        Main.notify("Task Reminder", "Calendar sync complete. " + this.calendarEvents.filter(e => !e.dismissed).length + " events today.");
     }
 
     // ---- Context menu (right-click) ----
