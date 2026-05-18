@@ -145,6 +145,7 @@ class ReminderApplet extends Applet.TextIconApplet {
             }
             for (let event of this.calendarEvents) {
                 if (event.completed || event.dismissed) continue;
+                if (event.day === "tomorrow") continue;
                 if (event.targetTime && new Date(event.targetTime).getTime() <= now) {
                     event.dismissed = true;
                 }
@@ -262,6 +263,7 @@ class ReminderApplet extends Applet.TextIconApplet {
         }
         for (let event of this.calendarEvents) {
             if (event.completed || event.dismissed) continue;
+            if (event.day === "tomorrow") continue;
             if (!event.targetTime) continue;
             let target = new Date(event.targetTime).getTime();
 
@@ -374,6 +376,7 @@ class ReminderApplet extends Applet.TextIconApplet {
         let allItems = this.tasks.concat(this.calendarEvents);
         for (let item of allItems) {
             if (item.completed || item.dismissed) continue;
+            if (item.day === "tomorrow") continue;
             if (!item._notified) continue;
             if (!item.targetTime) continue;
             if (!item._lastNagTime) item._lastNagTime = new Date(item.targetTime).getTime();
@@ -433,6 +436,7 @@ class ReminderApplet extends Applet.TextIconApplet {
         let allItems = this.tasks.concat(this.calendarEvents);
         for (let task of allItems) {
             if (task.completed || task.dismissed) continue;
+            if (task.day === "tomorrow") continue;
             if (!task.targetTime) continue;
             let t = new Date(task.targetTime).getTime();
             let diff = t - now;
@@ -454,6 +458,7 @@ class ReminderApplet extends Applet.TextIconApplet {
         }
         for (let event of this.calendarEvents) {
             if (event.completed || event.dismissed) continue;
+            if (event.day === "tomorrow") continue;
             if (new Date(event.targetTime).getTime() <= now) return true;
         }
         return false;
@@ -466,7 +471,7 @@ class ReminderApplet extends Applet.TextIconApplet {
             new Date(t.targetTime).getTime() <= now
         );
         let expiredCal = this.calendarEvents.filter(e =>
-            !e.completed && !e.dismissed &&
+            !e.completed && !e.dismissed && e.day !== "tomorrow" &&
             new Date(e.targetTime).getTime() <= now
         );
         return expired.concat(expiredCal);
@@ -551,7 +556,7 @@ class ReminderApplet extends Applet.TextIconApplet {
 
         // Task list - merge manual tasks and calendar events, sorted by target time
         let visibleTasks = this.tasks.filter(t => !t.dismissed);
-        let visibleCalEvents = this.calendarEvents.filter(e => !e.dismissed);
+        let visibleCalEvents = this.calendarEvents.filter(e => !e.dismissed && e.day !== "tomorrow");
         let allItems = visibleTasks.concat(visibleCalEvents);
         allItems.sort((a, b) => {
             let ta = a.targetTime ? new Date(a.targetTime).getTime() : Infinity;
@@ -574,6 +579,27 @@ class ReminderApplet extends Applet.TextIconApplet {
                 } else {
                     this._addTaskRow(item);
                 }
+            }
+        }
+
+        // Tomorrow section (view-only)
+        let tomorrowEvents = this.calendarEvents.filter(e => !e.dismissed && e.day === "tomorrow");
+        tomorrowEvents.sort((a, b) => {
+            let ta = a.targetTime ? new Date(a.targetTime).getTime() : Infinity;
+            let tb = b.targetTime ? new Date(b.targetTime).getTime() : Infinity;
+            return ta - tb;
+        });
+        if (tomorrowEvents.length > 0) {
+            this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+            let tomorrowHeader = new PopupMenu.PopupBaseMenuItem({ reactive: false });
+            let tomorrowLabel = new St.Label({
+                text: "Tomorrow",
+                style_class: "reminder-tomorrow-header"
+            });
+            tomorrowHeader.addActor(tomorrowLabel);
+            this.menu.addMenuItem(tomorrowHeader);
+            for (let ev of tomorrowEvents) {
+                this._addTomorrowEventRow(ev);
             }
         }
     }
@@ -894,6 +920,44 @@ class ReminderApplet extends Applet.TextIconApplet {
         }
 
         container.add_child(line2);
+        item.addActor(container);
+        this.menu.addMenuItem(item);
+    }
+
+    _addTomorrowEventRow(event) {
+        let item = new PopupMenu.PopupBaseMenuItem({ reactive: false });
+        let container = new St.BoxLayout({
+            style_class: "reminder-task-row reminder-cal-tomorrow",
+            vertical: true
+        });
+
+        // Line 1: time + description (no buttons)
+        let line1 = new St.BoxLayout({ style_class: "reminder-row-line1", vertical: false });
+
+        let timeText;
+        if (event.allDay) {
+            timeText = "ALL DAY";
+        } else {
+            timeText = _formatTimeAmPm(new Date(event.targetTime));
+            if (event.endTime) {
+                timeText += " - " + _formatTimeAmPm(new Date(event.endTime));
+            }
+        }
+        let timeLabel = new St.Label({
+            text: timeText,
+            style_class: "reminder-tomorrow-time"
+        });
+        line1.add_child(timeLabel);
+
+        let descLabel = new St.Label({
+            text: event.description,
+            style_class: "reminder-tomorrow-desc",
+            x_expand: true,
+            y_align: Clutter.ActorAlign.CENTER
+        });
+        line1.add_child(descLabel);
+
+        container.add_child(line1);
         item.addActor(container);
         this.menu.addMenuItem(item);
     }
@@ -1372,7 +1436,7 @@ class ReminderApplet extends Applet.TextIconApplet {
 
         let now = new Date();
         let rangeStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-        let rangeEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+        let rangeEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2, 0, 0, 0);
 
         let config = JSON.stringify({
             serverUrl: this.caldavUrl,
@@ -1432,20 +1496,24 @@ class ReminderApplet extends Applet.TextIconApplet {
 
         // Build new calendar events from thread results
         let newEvents = [];
+        let now = new Date();
+        let todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
         for (let ev of results.events) {
             let targetTime = ev.dtstart;
             let endTime = ev.dtend;
-            if (ev.allDay) {
-                let today = new Date();
+            let evStart = new Date(ev.dtstart);
+            let day = evStart.getTime() < todayEnd.getTime() ? "today" : "tomorrow";
+            if (ev.allDay && day === "today") {
                 let h = this.allDayReminderHour || 8;
                 let m = this.allDayReminderMinute || 0;
-                let reminderDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), h, m, 0);
+                let reminderDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0);
                 targetTime = reminderDate.toISOString();
                 endTime = null;
             }
             newEvents.push({
                 id: "cal-" + ev.uid,
                 source: "calendar",
+                day: day,
                 description: ev.summary,
                 targetTime: targetTime,
                 endTime: endTime,
